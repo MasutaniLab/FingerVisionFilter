@@ -1,0 +1,148 @@
+#ifndef FINGERVISION_IDL
+#define FINGERVISION_IDL
+
+#include "BasicDataType.idl"
+
+module FingerVision {
+    struct BlobMove {
+        float Pox;
+        float Poy;
+        float So;
+        float DPx;
+        float DPy;
+        float DS;
+    };
+
+    struct BlobMoves {
+        //Header
+        unsigned long seq;
+        RTC::Time tm;
+        string frame_id;
+
+        //Index of the camera (or video stream) the in camera configuration
+        long camera_index;
+
+        //The Name parameter of the camera configuration.
+        string camera_name;
+
+        //Image size.
+        long width;
+        long height;
+
+        //Array of marker tracking results, which is a copy of TBlobTracker2::Data.
+        sequence<BlobMove> data;
+    };
+
+    struct ProxVision {
+        //Header
+        unsigned long seq;
+        RTC::Time tm;
+        string frame_id;
+
+        //Index of the camera (or video stream) the in camera configuration
+        long camera_index;
+
+        //The Name parameter of the camera configuration.
+        string camera_name;
+
+        //Image size.
+        long width;
+        long height;
+
+        //{om.m00, om.m10, om.m01, om.m20, om.m11, om.m02, om.m30, om.m21, om.m12, om.m03} of TObjDetTrackBSP::ObjMoments.
+        sequence<float> ObjM_m;
+
+        // {om.mu20, om.mu11, om.mu02, om.mu30, om.mu21, om.mu12, om.mu03} of TObjDetTrackBSP::ObjMoments.
+        sequence<float> ObjM_mu;
+
+        //{om.nu20, om.nu11, om.nu02, om.nu30, om.nu21, om.nu12, om.nu03} of TObjDetTrackBSP::ObjMoments.
+        sequence<float> ObjM_nu;
+
+        //Serialized array of TObjDetTrackBSP::ObjS.
+        sequence<float> ObjS;
+
+        //Serialized array of TObjDetTrackBSP::MvS.
+        sequence<float> MvS;
+    };
+
+    interface CoreService
+    {
+        oneway void pause();
+        oneway void resume();
+        oneway void set_frame_skip(in long num);
+        oneway void stop_detect_obj();
+        oneway void start_detect_obj();
+        oneway void clear_obj();
+    };
+
+    struct Filter1Wrench {
+        //Header
+        unsigned long seq;
+        RTC::Time tm;
+        string frame_id;
+
+        //FingerVision ID (== camera name)
+        string fv;
+
+        //Array of [px,py,fx,fy,fz] for all markers
+        //where [px,py]: position on the sensor frame, [fx,fy,fz]: force.
+        sequence<float> posforce_array;
+
+        //Array of wrench=[fx,fy,fz,tx,ty,tz] for all markers
+        //where [fx,fy,fz]: force, [tx,ty,tz]: torque.
+        sequence<float> force_array;
+
+        //Array of discrete state for all markers.
+        //A discrete state is in {0,1,3,5} that denotes a rough strength of the force.
+        sequence<long> dstate_array;
+
+        //Average of force_array.
+        sequence<double> force;
+
+        //Sum of dstate_array.
+        long dstate;
+    };
+
+    struct Filter1ObjInfo {
+        //Header
+        unsigned long seq;
+        RTC::Time tm;
+        string frame_id;
+
+        //FingerVision ID (== camera name)
+        string fv;
+
+        //Array of slips (slip distribution), which is a serialized list of 3x3 matrix.
+        //Each cell in the 3x3 matrix is the sum of moving pixels in the cell.
+        sequence<float> mv_s;
+
+        //Array of object existence, which is a serialized list of 3x3 matrix.
+        //Each cell in the 3x3 matrix is the sum of object pixels in the cell.
+        sequence<float> obj_s;
+
+        //Object center position [px,py] (position on the sensor frame).
+        sequence<double> obj_center;
+
+        //Object orientation.
+        double obj_orientation;
+
+        //Object area.
+        double obj_area;
+
+        //obj_center/dt (velocity of the object center)
+        sequence<double> d_obj_center;
+
+        //obj_orientation/dt (angular velocity of the object orientation)
+        double d_obj_orientation;
+
+        //obj_area/dt (speed of the object area change)
+        double d_obj_area;
+
+        //Filtered values (moving average filter is applied)
+        double obj_area_filtered;
+        sequence<double> d_obj_center_filtered;
+        double d_obj_orientation_filtered;
+        double d_obj_area_filtered;
+    };
+};
+#endif
